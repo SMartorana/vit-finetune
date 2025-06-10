@@ -32,24 +32,25 @@ class MyLightningCLI(LightningCLI):
         )
 
 
-torch.backends.cuda.matmul.allow_tf32 = True
-torch.backends.cudnn.allow_tf32 = True
+if __name__ == '__main__':
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
 
-cli = MyLightningCLI(
-    ClassificationModel,
-    DataModule,
-    save_config_kwargs={"overwrite": True},
-    trainer_defaults={"check_val_every_n_epoch": None},
-)
-
-# Copy the config into the experiment directory
-# Fix for https://github.com/Lightning-AI/lightning/issues/17168
-try:
-    os.rename(
-        os.path.join(cli.trainer.logger.save_dir, "config.yaml"),  # type:ignore
-        os.path.join(
-            cli.trainer.checkpoint_callback.dirpath[:-12], "config.yaml"  # type:ignore
-        ),
+    cli = MyLightningCLI(
+        ClassificationModel,
+        DataModule,
+        save_config_kwargs={"overwrite": True},
+        trainer_defaults={"check_val_every_n_epoch": None},
     )
-except:
-    pass
+
+    # Copy the config into the experiment directory
+    # Fix for https://github.com/Lightning-AI/lightning/issues/17168
+    try:
+        os.rename(
+            os.path.join(cli.trainer.logger.save_dir, "config.yaml"),  # type:ignore
+            os.path.join(
+                cli.trainer.checkpoint_callback.dirpath[:-12], "config.yaml"  # type:ignore
+            ),
+        )
+    except:
+        pass
