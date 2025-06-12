@@ -40,7 +40,7 @@ run_experiment() {
             --trainer.precision 16-mixed \
             --trainer.max_steps $MAX_STEPS \
             --trainer.val_check_interval $VAL_CHECK_INTERVAL \
-            --trainer.logger.class_path pytorch_lightning.loggers.CSVLogger \
+            --trainer.logger.class_path pytorch_lightning.loggers.TensorBoardLogger \
             --trainer.logger.init_args.save_dir ../../output/experiments \
             --trainer.logger.init_args.name "$exp_name" \
             --model.model_name vit-b16-224-in21k \
@@ -70,7 +70,7 @@ run_experiment() {
             --trainer.precision 16-mixed \
             --trainer.max_steps $MAX_STEPS \
             --trainer.val_check_interval $VAL_CHECK_INTERVAL \
-            --trainer.logger.class_path pytorch_lightning.loggers.CSVLogger \
+            --trainer.logger.class_path pytorch_lightning.loggers.TensorBoardLogger \
             --trainer.logger.init_args.save_dir ../../output/experiments \
             --trainer.logger.init_args.name "$exp_name" \
             --model.model_name vit-b16-224-in21k \
@@ -91,6 +91,14 @@ run_experiment() {
             --model_checkpoint.mode max \
             --model_checkpoint.save_last true
     fi
+    
+    # Export TensorBoard logs to CSV
+    echo "📊 Esportazione TensorBoard logs in CSV..."
+    for version_dir in ../../output/experiments/$exp_name/version_*; do
+        if [ -d "$version_dir" ]; then
+            tensorboard --logdir "$version_dir" --export_to_csv "$version_dir/metrics.csv" 2>/dev/null || echo "⚠️  TensorBoard export fallito per $version_dir"
+        fi
+    done
     
     echo "✅ Completato: $exp_name"
     echo "---------------------------------------------------"
@@ -117,6 +125,22 @@ echo "🎯 Avvio esperimenti ViT Fine-tuning"
 echo "Dataset: $DATASET_ROOT"
 echo "Classi: $NUM_CLASSES"
 echo "Image Size: $IMAGE_SIZE"
+echo "================================================="
+
+# Avvia TensorBoard in background per monitoraggio live
+echo "📊 Avvio TensorBoard per monitoraggio live..."
+tensorboard --logdir ../../output/experiments --port 6006 --host 0.0.0.0 &
+TENSORBOARD_PID=$!
+sleep 3
+
+# Apri TensorBoard nel browser (se disponibile)
+echo "🌐 Apertura TensorBoard nel browser..."
+if command -v xdg-open > /dev/null; then
+    xdg-open http://localhost:6006 &
+elif command -v open > /dev/null; then
+    open http://localhost:6006 &
+fi
+echo "📈 TensorBoard disponibile su: http://localhost:6006"
 echo "================================================="
 
 # =============================================================================
@@ -231,4 +255,12 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 echo "📊 Per analizzare i risultati:"
-echo "python ../../analyze_results.py" 
+echo "python ../../analyze_results.py"
+
+# Cleanup: chiudi TensorBoard
+echo ""
+echo "🛑 Chiusura TensorBoard..."
+if [ ! -z "$TENSORBOARD_PID" ]; then
+    kill $TENSORBOARD_PID 2>/dev/null || true
+    echo "✅ TensorBoard chiuso"
+fi 

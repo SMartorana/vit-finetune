@@ -65,6 +65,17 @@ echo =================================================
 REM Crea directory output
 if not exist "..\..\output\single_experiments" mkdir "..\..\output\single_experiments"
 
+REM Avvia TensorBoard in background per monitoraggio live
+echo 📊 Avvio TensorBoard per monitoraggio live...
+start /B tensorboard --logdir "..\..\output\single_experiments" --port 6006 --host 0.0.0.0
+timeout /t 3 /nobreak >nul
+
+REM Apri TensorBoard nel browser
+echo 🌐 Apertura TensorBoard nel browser...
+start http://localhost:6006
+echo 📈 TensorBoard disponibile su: http://localhost:6006
+echo =================================================
+
 REM Esegui esperimento
 echo.
 echo Eseguendo esperimento...
@@ -77,7 +88,7 @@ if "%TRAINING_MODE%"=="lora" (
         --trainer.precision 16-mixed ^
         --trainer.max_steps %MAX_STEPS% ^
         --trainer.val_check_interval %VAL_CHECK_INTERVAL% ^
-        --trainer.logger.class_path pytorch_lightning.loggers.CSVLogger ^
+        --trainer.logger.class_path pytorch_lightning.loggers.TensorBoardLogger ^
         --trainer.logger.init_args.save_dir ..\..\output\single_experiments ^
         --trainer.logger.init_args.name "%EXP_NAME%" ^
         --model.model_name vit-b16-224-in21k ^
@@ -107,7 +118,7 @@ if "%TRAINING_MODE%"=="lora" (
         --trainer.precision 16-mixed ^
         --trainer.max_steps %MAX_STEPS% ^
         --trainer.val_check_interval %VAL_CHECK_INTERVAL% ^
-        --trainer.logger.class_path pytorch_lightning.loggers.CSVLogger ^
+        --trainer.logger.class_path pytorch_lightning.loggers.TensorBoardLogger ^
         --trainer.logger.init_args.save_dir ..\..\output\single_experiments ^
         --trainer.logger.init_args.name "%EXP_NAME%" ^
         --model.model_name vit-b16-224-in21k ^
@@ -127,6 +138,14 @@ if "%TRAINING_MODE%"=="lora" (
         --model_checkpoint.monitor val_acc ^
         --model_checkpoint.mode max ^
         --model_checkpoint.save_last true
+)
+
+REM Export TensorBoard logs to CSV
+echo 📊 Esportazione TensorBoard logs in CSV...
+for /d %%v in (..\..\output\single_experiments\%EXP_NAME%\version_*) do (
+    if exist "%%v" (
+        tensorboard --logdir "%%v" --export_to_csv "%%v\metrics.csv" 2>nul || echo ⚠️  TensorBoard export fallito per %%v
+    )
 )
 
 echo.
@@ -166,6 +185,11 @@ if /i "%reply%"=="y" (
 echo.
 echo 📊 Per analizzare tutti i risultati:
 echo    python ..\..\analyze_results.py --experiments_dir ..\..\output\single_experiments
+
+echo.
+echo 🛑 TensorBoard è ancora in esecuzione su http://localhost:6006
+echo    Per chiuderlo manualmente: taskkill /F /IM tensorboard.exe
+echo    O chiudi semplicemente questa finestra del terminale
 
 REM =============================================================================
 REM HELP

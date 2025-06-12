@@ -49,6 +49,22 @@ echo "================================================="
 # Crea directory output
 mkdir -p ../../output/single_experiments
 
+# Avvia TensorBoard in background per monitoraggio live
+echo "📊 Avvio TensorBoard per monitoraggio live..."
+tensorboard --logdir ../../output/single_experiments --port 6006 --host 0.0.0.0 &
+TENSORBOARD_PID=$!
+sleep 3
+
+# Apri TensorBoard nel browser (se disponibile)
+echo "🌐 Apertura TensorBoard nel browser..."
+if command -v xdg-open > /dev/null; then
+    xdg-open http://localhost:6006 &
+elif command -v open > /dev/null; then
+    open http://localhost:6006 &
+fi
+echo "📈 TensorBoard disponibile su: http://localhost:6006"
+echo "================================================="
+
 # Comando base
 CMD="python ../../main.py fit \
     --trainer.accelerator gpu \
@@ -56,7 +72,7 @@ CMD="python ../../main.py fit \
     --trainer.precision 16-mixed \
     --trainer.max_steps $MAX_STEPS \
     --trainer.val_check_interval $VAL_CHECK_INTERVAL \
-    --trainer.logger.class_path pytorch_lightning.loggers.CSVLogger \
+    --trainer.logger.class_path pytorch_lightning.loggers.TensorBoardLogger \
     --trainer.logger.init_args.save_dir ../../output/single_experiments \
     --trainer.logger.init_args.name \"$EXP_NAME\" \
     --model.model_name vit-b16-224-in21k \
@@ -91,6 +107,14 @@ echo ""
 
 # Esegui comando
 eval $CMD
+
+# Export TensorBoard logs to CSV
+echo "📊 Esportazione TensorBoard logs in CSV..."
+for version_dir in ../../output/single_experiments/$EXP_NAME/version_*; do
+    if [ -d "$version_dir" ]; then
+        tensorboard --logdir "$version_dir" --export_to_csv "$version_dir/metrics.csv" 2>/dev/null || echo "⚠️  TensorBoard export fallito per $version_dir"
+    fi
+done
 
 echo ""
 echo "✅ Esperimento completato: $EXP_NAME"
@@ -132,4 +156,12 @@ fi
 
 echo ""
 echo "📊 Per analizzare tutti i risultati:"
-echo "   python ../../analyze_results.py --experiments_dir ../../output/single_experiments" 
+echo "   python ../../analyze_results.py --experiments_dir ../../output/single_experiments"
+
+# Cleanup: chiudi TensorBoard
+echo ""
+echo "🛑 Chiusura TensorBoard..."
+if [ ! -z "$TENSORBOARD_PID" ]; then
+    kill $TENSORBOARD_PID 2>/dev/null || true
+    echo "✅ TensorBoard chiuso"
+fi 

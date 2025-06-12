@@ -22,6 +22,17 @@ echo Classi: %NUM_CLASSES%
 echo Image Size: %IMAGE_SIZE%
 echo =================================================
 
+REM Avvia TensorBoard in background per monitoraggio live
+echo 📊 Avvio TensorBoard per monitoraggio live...
+start /B tensorboard --logdir "..\..\output\experiments" --port 6006 --host 0.0.0.0
+timeout /t 3 /nobreak >nul
+
+REM Apri TensorBoard nel browser
+echo 🌐 Apertura TensorBoard nel browser...
+start http://localhost:6006
+echo 📈 TensorBoard disponibile su: http://localhost:6006
+echo =================================================
+
 REM =============================================================================
 REM ESPERIMENTI FULL FINE-TUNING
 REM =============================================================================
@@ -114,6 +125,11 @@ echo.
 echo 📊 Per analizzare i risultati:
 echo python ..\..\analyze_results.py
 
+echo.
+echo 🛑 TensorBoard è ancora in esecuzione su http://localhost:6006
+echo    Per chiuderlo manualmente: taskkill /F /IM tensorboard.exe
+echo    O chiudi semplicemente questa finestra del terminale
+
 goto :eof
 
 REM =============================================================================
@@ -140,7 +156,7 @@ python ..\..\main.py fit ^
     --trainer.precision 16-mixed ^
     --trainer.max_steps %MAX_STEPS% ^
     --trainer.val_check_interval %VAL_CHECK_INTERVAL% ^
-    --trainer.logger.class_path pytorch_lightning.loggers.CSVLogger ^
+    --trainer.logger.class_path pytorch_lightning.loggers.TensorBoardLogger ^
     --trainer.logger.init_args.save_dir ..\..\output\experiments ^
     --trainer.logger.init_args.name "%exp_name%" ^
     --model.model_name vit-b16-224-in21k ^
@@ -160,6 +176,14 @@ python ..\..\main.py fit ^
     --model_checkpoint.monitor val_acc ^
     --model_checkpoint.mode max ^
     --model_checkpoint.save_last true
+
+REM Export TensorBoard logs to CSV
+echo 📊 Esportazione TensorBoard logs in CSV...
+for /d %%v in (..\..\output\experiments\%exp_name%\version_*) do (
+    if exist "%%v" (
+        tensorboard --logdir "%%v" --export_to_csv "%%v\metrics.csv" 2>nul || echo ⚠️  TensorBoard export fallito per %%v
+    )
+)
 
 echo ✅ Completato: %exp_name%
 echo ---------------------------------------------------
@@ -188,7 +212,7 @@ python ..\..\main.py fit ^
     --trainer.precision 16-mixed ^
     --trainer.max_steps %MAX_STEPS% ^
     --trainer.val_check_interval %VAL_CHECK_INTERVAL% ^
-    --trainer.logger.class_path pytorch_lightning.loggers.CSVLogger ^
+    --trainer.logger.class_path pytorch_lightning.loggers.TensorBoardLogger ^
     --trainer.logger.init_args.save_dir ..\..\output\experiments ^
     --trainer.logger.init_args.name "%exp_name%" ^
     --model.model_name vit-b16-224-in21k ^
@@ -211,6 +235,14 @@ python ..\..\main.py fit ^
     --model_checkpoint.monitor val_acc ^
     --model_checkpoint.mode max ^
     --model_checkpoint.save_last true
+
+REM Export TensorBoard logs to CSV
+echo 📊 Esportazione TensorBoard logs in CSV...
+for /d %%v in (..\..\output\experiments\%exp_name%\version_*) do (
+    if exist "%%v" (
+        tensorboard --logdir "%%v" --export_to_csv "%%v\metrics.csv" 2>nul || echo ⚠️  TensorBoard export fallito per %%v
+    )
+)
 
 echo ✅ Completato: %exp_name%
 echo ---------------------------------------------------

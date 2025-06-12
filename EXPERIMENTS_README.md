@@ -42,6 +42,7 @@ pip install pytorch_lightning[extra]==2.0.2
 pip install torchmetrics==0.11.4
 pip install transformers==4.38.0
 pip install wandb==0.15.2
+pip install tensorboard
 ```
 
 ### 1b. Testa l'environment
